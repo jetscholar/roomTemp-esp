@@ -3,7 +3,7 @@
 
 #include <DHT.h>
 
-#define DHTPIN  2         // D4 on NodeMCU = GPIO 2
+#define DHTPIN  D5         // D4 on NodeMCU = GPIO 2
 #define DHTTYPE DHT11     // Define as DHT11
 
 DHT dht(DHTPIN, DHTTYPE);

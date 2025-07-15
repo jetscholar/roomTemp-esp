@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <time.h>
@@ -67,7 +68,7 @@ void sendToServer(float temperature, float humidity = -1.0) {
   http.addHeader("X-API-KEY", apiKey);
 
   String payload = "{";
-  payload += "\"location\":\"Room 1\",";
+  payload += "\"location\":\"" + String(deviceLocation) + "\",";
   payload += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
   payload += "\"temperature_c\":" + String(temperature, 2) + ",";
 
@@ -111,6 +112,29 @@ void setup() {
 #endif
 
   connectWiFi();
+
+    // --- OTA Setup ---
+  ArduinoOTA.setHostname(deviceLocation);  // Optional: name device by location
+  ArduinoOTA.setPassword(otaPassword);     // from env.h
+
+  ArduinoOTA.onStart([]() {
+    Serial.println("🔁 OTA Update Started");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("✅ OTA Update Completed");
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("❌ OTA Error [%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+
+  ArduinoOTA.begin();
+  Serial.println("📡 OTA Ready");
+
 }
 
 // --- LOOP ---
@@ -119,12 +143,14 @@ void loop() {
   float humidity = -1.0;
   bool valid = false;
 
-#if USE_LM36
-  temperature = readLM36();
-  valid = true;
-#else
-  valid = readDHTData(temperature, humidity);
-#endif
+    ArduinoOTA.handle();
+
+  #if USE_LM36
+    temperature = readLM36();
+    valid = true;
+  #else
+    valid = readDHTData(temperature, humidity);
+  #endif
 
   if (!valid) {
     Serial.println("⚠️ Sensor read failed.");
